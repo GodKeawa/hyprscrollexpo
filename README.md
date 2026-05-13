@@ -34,8 +34,6 @@ A great start to configure this plugin would be adding this code to the `plugin`
 Note that when layout is set to scrolling, properties for grid mode are ignored(not used). 
 
 | property | type | description | default |
-
-
 | --- | --- | --- | --- |
 columns | number | how many desktops are displayed on one line | `3`
 gap_size | number | gap between desktops | `5`
