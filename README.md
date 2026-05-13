@@ -1,6 +1,12 @@
-# HyprScrollExpo
-HyprScrollExpo is an overview plugin like niri. Forked from hyprland-plugins:hyprexpo
-  
+# HyprExpoScroll
+HyprExpoScroll is an overview plugin like niri. Forked from hyprland-plugins:hyprexpo as the original plugin is no longer maintained.
+Only supports latest hyprland, not -git. Not actively maintained.
+
+https://github.com/user-attachments/assets/c5102f6a-d43c-4c24-8f65-e7308691e8c5
+
+## Usage
+Same as normal plugins.
+
 ## Config
 A great start to configure this plugin would be adding this code to the `plugin` section of your hyprland configuration file:  
 ```ini
@@ -24,8 +30,11 @@ A great start to configure this plugin would be adding this code to the `plugin`
 ```
 
 ### Properties
+Note that when layout is set to scrolling, properties for grid mode are ignored(not used). 
 
 | property | type | description | default |
+
+
 | --- | --- | --- | --- |
 columns | number | how many desktops are displayed on one line | `3`
 gap_size | number | gap between desktops | `5`
