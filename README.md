@@ -1,5 +1,6 @@
 # HyprExpoScroll
 HyprExpoScroll is an overview plugin like niri. Forked from hyprland-plugins:hyprexpo as the original plugin is no longer maintained.
+
 Only supports latest hyprland, not -git. Not actively maintained.
 
 https://github.com/user-attachments/assets/c5102f6a-d43c-4c24-8f65-e7308691e8c5
