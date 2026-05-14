@@ -3,11 +3,11 @@ name = "hyprexpo"
 authors = ["Vaxry && GodKeawa"]
 
 commit_pins = [
-    ["af923e30d1d24f1f4a4f5cb8308065173c1d9539", "ca2dd0c3a8ceb470612c22ce95746abe660d22a5"],  # 0.55.0
+    ["af923e30d1d24f1f4a4f5cb8308065173c1d9539", "76749e52c6960e892d35cad74dc68dcd605782da"],  # 0.55.0
 ]
 
 [hyprexpo]
-description = "hyprexpo — niri scroll expo plugin for Hyprland"
+description = "hyprexpo — niri like scroll expo plugin for Hyprland"
 authors = ["Vaxry && GodKeawa"]
 output = "hyprexpo.so"
 build = [
