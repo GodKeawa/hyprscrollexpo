@@ -7,7 +7,7 @@ project(hyprexpo
 
 set(CMAKE_CXX_STANDARD 23)
 
-file(GLOB_RECURSE SRC "*.cpp")
+file(GLOB SRC "*.cpp")
 
 add_library(hyprexpo SHARED ${SRC})
 

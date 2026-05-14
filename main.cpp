@@ -350,7 +350,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:follow_mouse", "scroll follow mouse", 1));
     addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:active_color", "scroll active color", 0x33CCFFEE));
     addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:inactive_color", "scroll inactive color", 0x595959AA));
-    
+
     return {"hyprexpo", "A plugin for an overview", "Vaxry", "1.0"};
 }
 
