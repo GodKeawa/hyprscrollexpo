@@ -1,14 +1,23 @@
 # HyprExpo
 HyprExpo is an overview plugin like niri. Forked from hyprland-plugins:hyprexpo as the original plugin is no longer maintained.
 
-Only supports latest hyprland, not -git. Not actively maintained.
-
-Currently supports Hyprland V0.55.0-4.
+Currently supports Hyprland V0.55.0.
 
 https://github.com/user-attachments/assets/c5102f6a-d43c-4c24-8f65-e7308691e8c5
 
 ## Usage
 Same as normal plugins.
+
+## Features
+- Two layouts: grid and scrolling
+    - Grid layout: displays all workspaces in a grid
+      - supports gestures to switch workspaces
+      - just takes the snapshot of the workspace and displays it in the grid, so performance and compatibility is good
+    - Scrolling layout: displays workspaces in a horizontal line
+      - supports scroll wheel to switch workspaces
+      - supports gestures to switch workspaces or windows by left mouse button
+      - supports drag and drop windows to switch workspaces by right mouse button
+- Original border rendering supported(for active or inactive windows)
 
 ## Config
 A great start to configure this plugin would be adding this code to the `plugin` section of your hyprland configuration file:  
