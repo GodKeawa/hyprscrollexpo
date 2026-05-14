@@ -345,8 +345,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     configValues.scrollMovesUpDown = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:scroll_moves_up_down", "scroll moves up/down", 1);
     configValues.defaultZoom       = makeShared<Config::Values::CFloatValue>("plugin:hyprexpo:scrolling:default_zoom", "default zoom", 0.5f);
     configValues.followMouse       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:follow_mouse", "scroll follow mouse", 1);
-    configValues.activeColor       = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:active_color", "scroll active color", 0x33CCFFEE);
-    configValues.inactiveColor     = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:inactive_color", "scroll inactive color", 0x595959AA);
 
     HyprlandAPI::addConfigValueV2(PHANDLE, configValues.columns);
     HyprlandAPI::addConfigValueV2(PHANDLE, configValues.gapSize);
@@ -359,8 +357,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addConfigValueV2(PHANDLE, configValues.scrollMovesUpDown);
     HyprlandAPI::addConfigValueV2(PHANDLE, configValues.defaultZoom);
     HyprlandAPI::addConfigValueV2(PHANDLE, configValues.followMouse);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.activeColor);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.inactiveColor);
 
     return {"hyprexpo", "A plugin for an overview", "Vaxry", "1.0"};
 }

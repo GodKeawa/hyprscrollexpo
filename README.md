@@ -16,19 +16,19 @@ A great start to configure this plugin would be adding this code to the `plugin`
 # .config/hypr/hyprland.lua
     plugin = {
         hyprexpo = {
-            columns = 3,
-            gap_size = 5,
-            bg_col = "rgba(33ccffee)",
-            workspace_method = "center current",
-            skip_empty = false,
-            gesture_distance = 300,
             layout = "scrolling",
             scrolling = {
                 scroll_moves_up_down = 1,
                 follow_mouse = 1,
                 default_zoom = 0.5,
-                active_color = "rgba(33ccffee)",
-                inactive_color = "rgba(595959aa)",
+            },
+            grid = {
+                columns = 3,
+                gap_size = 5,
+                bg_col = "rgba(33ccffee)",
+                workspace_method = "center current",
+                skip_empty = false,
+                gesture_distance = 300,
             },
         },
     },
@@ -37,25 +37,23 @@ A great start to configure this plugin would be adding this code to the `plugin`
 ### Properties
 Note that when layout is set to scrolling, properties for grid mode are ignored(not used). 
 
-| property | type | description | default |
-| --- | --- | --- | --- |
-columns | number | how many desktops are displayed on one line | `3`
-gap_size | number | gap between desktops | `5`
-bg_col | color | color in gaps (between desktops) | `rgb(000000)`
-workspace_method | [center/first] [workspace] | position of the desktops | `center current`
-skip_empty | boolean | whether the grid displays workspaces sequentially by id using selector "r" (`false`) or skips empty workspaces using selector "m" (`true`) | `false`
-gesture_distance | number | how far is the max for the gesture | `300`
-layout | string | overview rendering style, set to `scrolling` to use scrollable overview | `grid`
-scrolling:scroll_moves_up_down | integer | `1` means scroll wheel moves workplaces vertically, `0` zooming | `1`
-scrolling:follow_mouse | integer | `1` means focus follows mouse, `0` don't | `1`
-scrolling:default_zoom | float | the zoom scale for windows in scroll layout | `0.5`
-scrolling:active_color | color | the color of the border of the active window in scroll layout | `rgba(33ccffee)`
-scrolling:inactive_color | color | the color of the border of the inactive windows in scroll layout | `rgba(595959aa)`
+| property                       | type                       | description                                                                                                                                | default          |
+| ------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| layout                         | string                     | overview rendering style, set to `scrolling` to use scrollable overview                                                                    | `grid`           |
+| grid:columns                   | number                     | how many desktops are displayed on one line                                                                                                | `3`              |
+| grid:gap_size                  | number                     | gap between desktops                                                                                                                       | `5`              |
+| grid:bg_col                    | color                      | color in gaps (between desktops)                                                                                                           | `rgb(000000)`    |
+| grid:workspace_method          | [center/first] [workspace] | position of the desktops                                                                                                                   | `center current` |
+| grid:skip_empty                | boolean                    | whether the grid displays workspaces sequentially by id using selector "r" (`false`) or skips empty workspaces using selector "m" (`true`) | `false`          |
+| grid:gesture_distance          | number                     | how far is the max for the gesture                                                                                                         | `300`            |
+| scrolling:scroll_moves_up_down | integer                    | `1` means scroll wheel moves workplaces vertically, `0` zooming                                                                            | `1`              |
+| scrolling:follow_mouse         | integer                    | `1` means focus follows mouse, `0` don't                                                                                                   | `1`              |
+| scrolling:default_zoom         | float                      | the zoom scale for windows in scroll layout                                                                                                | `0.5`            |
 
 ### Keywords
 
-| name | description | arguments |
-| -- | -- | -- | 
+| name             | description                                                   | arguments       |
+| ---------------- | ------------------------------------------------------------- | --------------- |
 | hyprexpo-gesture | same as gesture, but for hyprexpo gestures. Supports: `expo`. | Same as gesture |
 
 ### Binding
@@ -67,12 +65,12 @@ end)
 ```
 
 Here are a list of options you can use:  
-| option | description |
-| --- | --- |
-toggle | displays if hidden, hide if displayed
-select | selects the hovered desktop
-bring | brings a window from the hovered desktop to the current desktop
-off | hides the overview
-disable | same as `off`
-on | displays the overview
-enable | same as `on`
+| option  | description                                                     |
+| ------- | --------------------------------------------------------------- |
+| toggle  | displays if hidden, hide if displayed                           |
+| select  | selects the hovered desktop                                     |
+| bring   | brings a window from the hovered desktop to the current desktop |
+| off     | hides the overview                                              |
+| disable | same as `off`                                                   |
+| on      | displays the overview                                           |
+| enable  | same as `on`                                                    |

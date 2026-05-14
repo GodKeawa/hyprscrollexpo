@@ -52,10 +52,6 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
     // 负责收集工作区状态、初始化动画变量以及挂载各种输入/窗口事件监听器
     // -----------------------------------------------------
     static const CConfigValue<Config::FLOAT>   PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
-    static const CConfigValue<Config::INTEGER> ACOL("plugin:hyprexpo:scrolling:active_color");
-    static const CConfigValue<Config::INTEGER> ICOL("plugin:hyprexpo:scrolling:inactive_color");
-    ACTIVE_COLOR   = CHyprColor(*ACOL);
-    INACTIVE_COLOR = CHyprColor(*ICOL);
 
     const auto PMONITOR = Desktop::focusState()->monitor();
     pMonitor            = PMONITOR;
@@ -588,17 +584,14 @@ void CScrollOverview::fullRender() {
                 borderBox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
                 borderBox.translate({0.F, yoff});
 
-                borderBox.expand(4 * scale->value());
+                borderBox.expand(img->pWindow->getRealBorderSize() * scale->value());
                 borderBox.scale(pMonitor->m_scale).round();
 
-                CHyprColor col;
-                if (img->pWindow == Desktop::focusState()->window()) {
-                    col = ACTIVE_COLOR;
-                } else {
-                    col = INACTIVE_COLOR;
-                }
-
-                Render::GL::g_pHyprOpenGL->renderRect(borderBox, col, Render::GL::CHyprOpenGLImpl::SRectRenderData{.round = (int)(5 * pMonitor->m_scale)});
+                Render::GL::g_pHyprOpenGL->renderBorder(borderBox, img->pWindow->m_realBorderColor, {
+                    .round = (int)(img->pWindow->rounding() * pMonitor->m_scale * scale->value()),
+                    .roundingPower = img->pWindow->roundingPower(),
+                    .borderSize = (int)(img->pWindow->getRealBorderSize() * pMonitor->m_scale * scale->value())
+                });
             }
 
             CBox texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, pMonitor->m_size};

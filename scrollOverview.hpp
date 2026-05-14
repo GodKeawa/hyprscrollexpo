@@ -91,8 +91,5 @@ class CScrollOverview : public IOverview {
     bool                             swipe             = false;
     bool                             swipeWasCommenced = false;
 
-    CHyprColor                       ACTIVE_COLOR   = CHyprColor{0.2, 0.8, 1.0, 0.9};
-    CHyprColor                       INACTIVE_COLOR = CHyprColor{0.35, 0.35, 0.35, 0.67};
-
     friend class CScrollOverviewPassElement;
 };

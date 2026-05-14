@@ -22,6 +22,4 @@ static struct {
     SP<Config::Values::CIntValue>   scrollMovesUpDown;
     SP<Config::Values::CFloatValue> defaultZoom;
     SP<Config::Values::CIntValue>   followMouse;
-    SP<Config::Values::CColorValue> activeColor;
-    SP<Config::Values::CColorValue> inactiveColor;
 } configValues;
