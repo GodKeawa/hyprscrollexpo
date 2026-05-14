@@ -3,7 +3,7 @@ name = "hyprexpo"
 authors = ["GodKeawa"]
 
 commit_pins = [
-    ["af923e30d1d24f1f4a4f5cb8308065173c1d9539", "90291a11f9f40f07b7d498112aba32f6f1be4336"],  # 0.55.0
+    ["af923e30d1d24f1f4a4f5cb8308065173c1d9539", "ca2dd0c3a8ceb470612c22ce95746abe660d22a5"],  # 0.55.0
 ]
 
 [hyprexpo]
