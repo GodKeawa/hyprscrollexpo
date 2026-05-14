@@ -9,7 +9,7 @@
 inline HANDLE PHANDLE      = nullptr;
 inline bool   IS_SCROLLING = false;
 
-static struct {
+struct SConfig {
     SP<Config::Values::CStringValue> layout;
     // grid
     SP<Config::Values::CIntValue>    columns;
@@ -22,4 +22,6 @@ static struct {
     SP<Config::Values::CIntValue>   scrollMovesUpDown;
     SP<Config::Values::CFloatValue> defaultZoom;
     SP<Config::Values::CIntValue>   followMouse;
-} configValues;
+};
+
+inline UP<SConfig> configValues;

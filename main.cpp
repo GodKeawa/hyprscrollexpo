@@ -320,9 +320,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 
     // -----------------------------------------------------------------------------------------
     // [渲染阶段监听]: 注入自定义渲染通道 (Render Pass)
-    // 默认在 RENDER_LAST_MOMENT（所有原生层渲染完成后的最后时刻）执行 COverviewPassElement
-    // [未来 Niri 改造方案 A]: 想要保留 Waybar，可以将此处的注入阶段提前，比如改为 RENDER_PRE_WINDOW，
-    // 这样后续的 UI Layer 就能盖在 Overview 的上面。
+    // 改为 RENDER_PRE_WINDOW，
+    // 这样后续的 UI Layer 就能原生盖在 Overview 的上面。
     // -----------------------------------------------------------------------------------------
     static auto P_STAGE = Event::bus()->m_events.render.stage.listen([](eRenderStage stage) {
         if (stage == RENDER_LAST_MOMENT && g_pOverview) {
@@ -333,30 +332,32 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addDispatcherV2(PHANDLE, "hyprexpo:expo", ::onExpoDispatcher);
     HyprlandAPI::addLuaFunction(PHANDLE, "hyprexpo", "expo", ::luaExpo);
 
-    configValues.layout = makeShared<Config::Values::CStringValue>("plugin:hyprexpo:layout", "layout", "grid");
+    configValues = makeUnique<SConfig>();
 
-    configValues.columns         = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:columns", "columns", 3);
-    configValues.gapSize         = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:gap_size", "gap size", 5);
-    configValues.bgCol           = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:grid:bg_col", "background color", 0xFF111111);
-    configValues.workspaceMethod = makeShared<Config::Values::CStringValue>("plugin:hyprexpo:grid:workspace_method", "workspace method", "center current");
-    configValues.skipEmpty       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:skip_empty", "skip empty workspaces", 0);
-    configValues.gestureDistance = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:gesture_distance", "gesture distance", 200);
+    configValues->layout = makeShared<Config::Values::CStringValue>("plugin:hyprexpo:layout", "layout", "grid");
 
-    configValues.scrollMovesUpDown = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:scroll_moves_up_down", "scroll moves up/down", 1);
-    configValues.defaultZoom       = makeShared<Config::Values::CFloatValue>("plugin:hyprexpo:scrolling:default_zoom", "default zoom", 0.5f);
-    configValues.followMouse       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:follow_mouse", "scroll follow mouse", 1);
+    configValues->columns         = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:columns", "columns", 3);
+    configValues->gapSize         = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:gap_size", "gap size", 5);
+    configValues->bgCol           = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:grid:bg_col", "background color", 0xFF111111);
+    configValues->workspaceMethod = makeShared<Config::Values::CStringValue>("plugin:hyprexpo:grid:workspace_method", "workspace method", "center current");
+    configValues->skipEmpty       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:skip_empty", "skip empty workspaces", 0);
+    configValues->gestureDistance = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:gesture_distance", "gesture distance", 200);
 
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.columns);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.gapSize);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.bgCol);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.workspaceMethod);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.skipEmpty);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.gestureDistance);
+    configValues->scrollMovesUpDown = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:scroll_moves_up_down", "scroll moves up/down", 1);
+    configValues->defaultZoom       = makeShared<Config::Values::CFloatValue>("plugin:hyprexpo:scrolling:default_zoom", "default zoom", 0.5f);
+    configValues->followMouse       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:follow_mouse", "scroll follow mouse", 1);
 
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.layout);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.scrollMovesUpDown);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.defaultZoom);
-    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.followMouse);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->columns);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->gapSize);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->bgCol);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->workspaceMethod);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->skipEmpty);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->gestureDistance);
+
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->layout);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->scrollMovesUpDown);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->defaultZoom);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues->followMouse);
 
     return {"hyprexpo", "A plugin for an overview", "Vaxry", "1.0"};
 }

@@ -91,5 +91,14 @@ class CScrollOverview : public IOverview {
     bool                             swipe             = false;
     bool                             swipeWasCommenced = false;
 
+    // Window Dragging State
+    bool                             isDragging = false;
+    PHLWINDOWREF                     draggedWindow;
+    PHLWORKSPACE                     draggedWindowOriginalWorkspace;
+    Vector2D                         dragStartCursorPos;
+    Vector2D                         dragOffset;
+
+    CHyprSignalListener              touchUpHook;
+
     friend class CScrollOverviewPassElement;
 };

@@ -62,20 +62,14 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
     const auto PMONITOR = Desktop::focusState()->monitor();
     pMonitor            = PMONITOR;
 
-    static const CConfigValue<Config::INTEGER> PCOLUMNS("plugin:hyprexpo:columns");
-    static const CConfigValue<Config::INTEGER> PGAPS("plugin:hyprexpo:gap_size");
-    static const CConfigValue<Config::INTEGER> PCOL("plugin:hyprexpo:bg_col");
-    static const CConfigValue<Config::INTEGER> PSKIP("plugin:hyprexpo:skip_empty");
-    static const CConfigValue<Config::STRING>  PMETHOD("plugin:hyprexpo:workspace_method");
-
-    SIDE_LENGTH = *PCOLUMNS;
-    GAP_WIDTH   = *PGAPS;
-    BG_COLOR    = CHyprColor(*PCOL);
+    SIDE_LENGTH = configValues->columns->value();
+    GAP_WIDTH   = configValues->gapSize->value();
+    BG_COLOR    = CHyprColor(configValues->bgCol->value());
 
     // process the method
     bool     methodCenter  = true;
     int      methodStartID = pMonitor->activeWorkspaceID();
-    CVarList method{*PMETHOD, 0, 's', true};
+    CVarList method{configValues->workspaceMethod->value(), 0, 's', true};
     if (method.size() < 2)
         Log::logger->log(Log::ERR, "[he] invalid workspace_method");
     else {
@@ -88,7 +82,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
     images.resize(SIDE_LENGTH * SIDE_LENGTH);
 
     // r includes empty workspaces; m skips over them
-    std::string selector = *PSKIP ? "m" : "r";
+    std::string selector = configValues->skipEmpty->value() ? "m" : "r";
 
     if (methodCenter) {
         int currentID = methodStartID;
@@ -517,18 +511,6 @@ void COverview::fullRender() {
             Render::GL::g_pHyprOpenGL->renderTextureInternal(image.fb->getTexture(), texbox, {.damage = &damage, .a = 1.0});
         }
     }
-
-    // -----------------------------------------------------------------------------------------
-    // [模块]: 主动重绘 Bar (Layer Surfaces) 实施方案 B
-    // 渲染完所有的工作区与窗口后，在此将顶层的 1(bottom), 2(top), 3(overlay) 重新画在最前面，
-    // 从而保证 Waybar 和 Mako 通知等不受遮挡
-    // -----------------------------------------------------------------------------------------
-    for (int i = 1; i <= 3; ++i) {
-        for (auto& ls : pMonitor->m_layerSurfaceLayers[i]) {
-            if (validMapped(ls))
-                g_pHyprRenderer->renderLayer(ls.lock(), pMonitor.lock(), Time::steadyNow());
-        }
-    }
 }
 
 static float lerp(const float& from, const float& to, const float perc) {
@@ -550,15 +532,14 @@ void COverview::resetSwipe() {
 void COverview::onSwipeUpdate(double delta) {
     m_isSwiping = true;
 
-    static const CConfigValue<Config::INTEGER> PDISTANCE("plugin:hyprexpo:gesture_distance");
+    const float PERC =
+        closing ? std::clamp(delta / (double)configValues->gestureDistance->value(), 0.0, 1.0) : 1.0 - std::clamp(delta / (double)configValues->gestureDistance->value(), 0.0, 1.0);
+    const auto WORKSPACE_FOCUS_ID = closing && closeOnID != -1 ? closeOnID : openedID;
 
-    const float                                PERC = closing ? std::clamp(delta / (double)*PDISTANCE, 0.0, 1.0) : 1.0 - std::clamp(delta / (double)*PDISTANCE, 0.0, 1.0);
-    const auto                                 WORKSPACE_FOCUS_ID = closing && closeOnID != -1 ? closeOnID : openedID;
+    Vector2D   tileSize = (pMonitor->m_size / SIDE_LENGTH);
 
-    Vector2D                                   tileSize = (pMonitor->m_size / SIDE_LENGTH);
-
-    const auto                                 SIZEMAX = pMonitor->m_size * pMonitor->m_size / tileSize;
-    const auto POSMAX = (-((pMonitor->m_size / (double)SIDE_LENGTH) * Vector2D{WORKSPACE_FOCUS_ID % SIDE_LENGTH, WORKSPACE_FOCUS_ID / SIDE_LENGTH}) * pMonitor->m_scale) *
+    const auto SIZEMAX = pMonitor->m_size * pMonitor->m_size / tileSize;
+    const auto POSMAX  = (-((pMonitor->m_size / (double)SIDE_LENGTH) * Vector2D{WORKSPACE_FOCUS_ID % SIDE_LENGTH, WORKSPACE_FOCUS_ID / SIDE_LENGTH}) * pMonitor->m_scale) *
         (pMonitor->m_size / tileSize);
 
     const auto SIZEMIN = pMonitor->m_size;

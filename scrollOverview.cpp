@@ -51,7 +51,6 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
     // [模块]: 初始化和设置
     // 负责收集工作区状态、初始化动画变量以及挂载各种输入/窗口事件监听器
     // -----------------------------------------------------
-    static const CConfigValue<Config::FLOAT>   PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
 
     const auto PMONITOR = Desktop::focusState()->monitor();
     pMonitor            = PMONITOR;
@@ -70,7 +69,7 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
     viewOffset->setUpdateCallback(damageMonitor);
 
     if (!swipe)
-        *scale = std::clamp((float)*PDEFAULTZOOM, 0.1F, 0.9F);
+        *scale = std::clamp((float)configValues->defaultZoom->value(), 0.1F, 0.9F);
 
     lastMousePosLocal = g_pInputManager->getMouseCoordsInternal() - pMonitor->m_position;
 
@@ -80,18 +79,48 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
 
         info.cancelled    = true;
         lastMousePosLocal = g_pInputManager->getMouseCoordsInternal() - pMonitor->m_position;
+
+        if (draggedWindow) {
+            Vector2D diff = lastMousePosLocal - dragStartCursorPos;
+            if (!isDragging && diff.size() > 5.0) {
+                isDragging = true;
+            }
+            if (isDragging) {
+                dragOffset = diff;
+                damage();
+            }
+        }
+        
         updateHoverFocus();
     };
 
-    auto onCursorSelect = [this](Event::SCallbackInfo& info) {
-        if (closing)
-            return;
-
-        info.cancelled = true;
-
+    auto onPress = [this]() {
+        if (closing) return;
         selectHoveredWorkspace();
+        if (closeOnWindow) {
+            draggedWindow = closeOnWindow;
+            draggedWindowOriginalWorkspace = closeOnWorkspace;
+            dragStartCursorPos = lastMousePosLocal;
+            dragOffset = {0.F, 0.F};
+            isDragging = false;
+        }
+    };
 
-        close();
+    auto onRelease = [this]() {
+        if (closing) return;
+        if (draggedWindow && isDragging) {
+            selectHoveredWorkspace();
+            if (closeOnWorkspace && closeOnWorkspace != draggedWindowOriginalWorkspace) {
+                g_pCompositor->moveWindowToWorkspaceSafe(draggedWindow.lock(), closeOnWorkspace);
+            }
+            draggedWindow.reset();
+            isDragging = false;
+            dragOffset = {0.F, 0.F};
+            redrawAll();
+        } else {
+            selectHoveredWorkspace();
+            close();
+        }
     };
 
     mouseMoveHook = Event::bus()->m_events.input.mouse.move.listen([onCursorMove](Vector2D pos, Event::SCallbackInfo& info) { onCursorMove(info); });
@@ -103,25 +132,39 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
 
         info.cancelled = true;
 
-        static const CConfigValue<Config::INTEGER> PZOOM("plugin:hyprexpo:scrolling:scroll_moves_up_down");
-
-        if (e.axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
-            *viewOffset = viewOffset->value() + Vector2D{e.delta, 0.0};
-        } else if (!*PZOOM) {
+        if (configValues->scrollMovesUpDown->value()) {
+            if (e.axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
+                *viewOffset = viewOffset->value() + Vector2D{e.delta, 0.0};
+            } else {
+                moveViewportWorkspace(e.delta > 0);
+            }
+        } else {
             const float VAL = std::clamp(sc<float>(scale->value() + e.delta / -500.F), 0.05F, 0.95F);
             *scale          = VAL;
-        } else
-            moveViewportWorkspace(e.delta > 0);
+        }
     });
 
-    // -----------------------------------------------------------------------------------------
-    // [输入事件]: 鼠标与触摸按键监听
-    // 目前仅绑定到 `onCursorSelect` 上，用于处理点击选中工作区/窗口并关闭 Overview。
-    // [未来 Niri 改造注意]: 如果要实现拖拽窗口，可以在这里拦截 `e.state == WL_POINTER_BUTTON_STATE_PRESSED`，
-    // 获取当前鼠标下的窗口并设置 `isDragging = true` 的状态标识。
-    // -----------------------------------------------------------------------------------------
-    mouseButtonHook = Event::bus()->m_events.input.mouse.button.listen([onCursorSelect](IPointer::SButtonEvent e, Event::SCallbackInfo& info) { onCursorSelect(info); });
-    touchDownHook   = Event::bus()->m_events.input.touch.down.listen([onCursorSelect](ITouch::SDownEvent e, Event::SCallbackInfo& info) { onCursorSelect(info); });
+    mouseButtonHook = Event::bus()->m_events.input.mouse.button.listen([this, onPress, onRelease](IPointer::SButtonEvent e, Event::SCallbackInfo& info) { 
+        if (closing) return;
+        info.cancelled = true;
+        if (e.state == WL_POINTER_BUTTON_STATE_PRESSED) {
+            onPress();
+        } else if (e.state == WL_POINTER_BUTTON_STATE_RELEASED) {
+            onRelease();
+        }
+    });
+
+    touchDownHook   = Event::bus()->m_events.input.touch.down.listen([this, onPress](ITouch::SDownEvent e, Event::SCallbackInfo& info) { 
+        if (closing) return;
+        info.cancelled = true;
+        onPress();
+    });
+    
+    touchUpHook = Event::bus()->m_events.input.touch.up.listen([this, onRelease](ITouch::SUpEvent e, Event::SCallbackInfo& info) {
+        if (closing) return;
+        info.cancelled = true;
+        onRelease();
+    });
 
     windowOpenHook = Event::bus()->m_events.window.open.listen([this](PHLWINDOW w) {
         if (closing)
@@ -232,9 +275,7 @@ void CScrollOverview::moveViewportWorkspace(bool up) {
 
     *viewOffset = {viewOffset->value().x, (sc<double>(viewportCurrentWorkspace) - sc<double>(activeIdx)) * pMonitor->m_size.y};
 
-    static const CConfigValue<Config::INTEGER> PFOLLOWMOUSE("plugin:hyprexpo:scrolling:follow_mouse");
-
-    if (!*PFOLLOWMOUSE) {
+    if (!configValues->followMouse->value()) {
         // Auto focus workspace ONLY when follow_mouse is OFF
         const auto   PMONITOR = pMonitor.lock();
         PHLWORKSPACE pWS      = images[viewportCurrentWorkspace]->pWorkspace;
@@ -269,8 +310,7 @@ void CScrollOverview::updateHoverFocus() {
     if (closing)
         return;
 
-    static const CConfigValue<Config::INTEGER> PFOLLOWMOUSE("plugin:hyprexpo:scrolling:follow_mouse");
-    if (!*PFOLLOWMOUSE)
+    if (!configValues->followMouse->value())
         return;
 
     const auto VIEWPORT_CENTER = CBox{{}, pMonitor->m_size}.middle();
@@ -567,6 +607,14 @@ void CScrollOverview::fullRender() {
 
     // render all views
     float yoff = -(float)activeIdx * pMonitor->m_size.y * scale->value();
+
+    struct SRenderTask {
+        SP<SWindowImage> img;
+        CBox borderBox;
+        CBox texbox;
+    };
+    std::optional<SRenderTask> draggedTask;
+
     for (const auto& wimg : images) {
         bool dirty = false;
 
@@ -578,33 +626,27 @@ void CScrollOverview::fullRender() {
 
             CBox windowBox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, img->pWindow->m_realSize->value()};
 
-            // Render border
-            {
-                CBox borderBox = windowBox;
-                borderBox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
-                borderBox.translate({0.F, yoff});
-
-                borderBox.expand(img->pWindow->getRealBorderSize() * scale->value());
-                borderBox.scale(pMonitor->m_scale).round();
-
-                Render::GL::g_pHyprOpenGL->renderBorder(borderBox, img->pWindow->m_realBorderColor, {
-                    .round = (int)(img->pWindow->rounding() * pMonitor->m_scale * scale->value()),
-                    .roundingPower = img->pWindow->roundingPower(),
-                    .borderSize = (int)(img->pWindow->getRealBorderSize() * pMonitor->m_scale * scale->value())
-                });
-            }
+            CBox borderBox = windowBox;
+            borderBox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
+            borderBox.translate({0.F, yoff});
+            borderBox.expand(img->pWindow->getRealBorderSize() * scale->value());
 
             CBox texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, pMonitor->m_size};
-
-            // -----------------------------------------------------------------------------------------
-            // [矩阵与坐标变换]: 窗口缩放与位移
-            // 将窗口的原坐标转化为基于视图中心点的相对缩放，加上滚动带来的偏移 yoff
-            // [未来 Niri 改造注意]: 若实现了窗口拖拽，可在此处根据拖拽的实时 Delta 偏移，临时累加到 texbox 的 translate 中
-            // -----------------------------------------------------------------------------------------
-            // scale the box to the viewport center
             texbox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
-
             texbox.translate({0.F, yoff});
+
+            if (isDragging && draggedWindow && img->pWindow == draggedWindow.lock()) {
+                borderBox.translate(dragOffset);
+                texbox.translate(dragOffset);
+                draggedTask = {img, borderBox, texbox};
+                continue; // Skip rendering it now
+            }
+
+            borderBox.scale(pMonitor->m_scale).round();
+            Render::GL::g_pHyprOpenGL->renderBorder(borderBox, img->pWindow->m_realBorderColor,
+                                                    {.round         = (int)(img->pWindow->rounding() * pMonitor->m_scale * scale->value()),
+                                                     .roundingPower = img->pWindow->roundingPower(),
+                                                     .borderSize    = (int)(img->pWindow->getRealBorderSize() * pMonitor->m_scale * scale->value())});
 
             texbox.scale(pMonitor->m_scale).round();
             CRegion damage{0, 0, INT16_MAX, INT16_MAX};
@@ -617,16 +659,19 @@ void CScrollOverview::fullRender() {
             std::erase_if(wimg->windowImages, [](const auto& e) { return !e->pWindow; });
     }
 
-    // -----------------------------------------------------------------------------------------
-    // [模块]: 主动重绘 Bar (Layer Surfaces) 实施方案 B
-    // 渲染完所有的工作区与窗口后，在此将顶层的 1(bottom), 2(top), 3(overlay) 重新画在最前面，
-    // 从而保证 Waybar 和 Mako 通知等不受遮挡
-    // -----------------------------------------------------------------------------------------
-    for (int i = 1; i <= 3; ++i) {
-        for (auto& ls : pMonitor->m_layerSurfaceLayers[i]) {
-            if (validMapped(ls))
-                g_pHyprRenderer->renderLayer(ls.lock(), pMonitor.lock(), Time::steadyNow());
-        }
+    if (draggedTask) {
+        // Render the dragged window on top
+        CBox borderBox = draggedTask->borderBox;
+        borderBox.scale(pMonitor->m_scale).round();
+        Render::GL::g_pHyprOpenGL->renderBorder(borderBox, draggedTask->img->pWindow->m_realBorderColor,
+                                                {.round         = (int)(draggedTask->img->pWindow->rounding() * pMonitor->m_scale * scale->value()),
+                                                 .roundingPower = draggedTask->img->pWindow->roundingPower(),
+                                                 .borderSize    = (int)(draggedTask->img->pWindow->getRealBorderSize() * pMonitor->m_scale * scale->value())});
+
+        CBox texbox = draggedTask->texbox;
+        texbox.scale(pMonitor->m_scale).round();
+        CRegion damage{0, 0, INT16_MAX, INT16_MAX};
+        Render::GL::g_pHyprOpenGL->renderTextureInternal(draggedTask->img->fb->getTexture(), texbox, {.damage = &damage, .a = (float)draggedTask->img->pWindow->m_alpha.value()});
     }
 }
 
@@ -643,36 +688,33 @@ void CScrollOverview::setClosing(bool closing_) {
 }
 
 void CScrollOverview::resetSwipe() {
-    static const CConfigValue<Config::FLOAT> PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
 
     if (closing) {
         close();
         return;
     }
 
-    (*scale)    = (float)*PDEFAULTZOOM;
+    (*scale)    = (float)configValues->defaultZoom->value();
     m_isSwiping = false;
 }
 
 void CScrollOverview::onSwipeUpdate(double delta) {
-    static const CConfigValue<Config::FLOAT>   PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
-    static const CConfigValue<Config::INTEGER> PDISTANCE("plugin:hyprexpo:gesture_distance");
 
     m_isSwiping = true;
 
-    const float PERC = closing ? std::clamp(delta / (double)*PDISTANCE, 0.0, 1.0) : 1.0 - std::clamp(delta / (double)*PDISTANCE, 0.0, 1.0);
+    const float PERC =
+        closing ? std::clamp(delta / (double)configValues->gestureDistance->value(), 0.0, 1.0) : 1.0 - std::clamp(delta / (double)configValues->gestureDistance->value(), 0.0, 1.0);
 
-    scale->setValueAndWarp(hyprlerp(1.F, (float)*PDEFAULTZOOM, PERC));
+    scale->setValueAndWarp(hyprlerp(1.F, (float)configValues->defaultZoom->value(), PERC));
 }
 
 void CScrollOverview::onSwipeEnd() {
-    static const CConfigValue<Config::FLOAT> PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
 
     if (closing) {
         close();
         return;
     }
 
-    (*scale)    = (float)*PDEFAULTZOOM;
+    (*scale)    = (float)configValues->defaultZoom->value();
     m_isSwiping = false;
 }
