@@ -1,7 +1,6 @@
 #include "overview.hpp"
 #include <algorithm>
-#include <any>
-#include <cmath>
+#include <cstddef>
 #define private   public
 #define protected public
 #include <hyprland/src/render/Renderer.hpp>
@@ -22,6 +21,8 @@
 #include <hyprland/src/render/OpenGL.hpp>
 #undef private
 #undef protected
+
+#include "globals.hpp"
 #include "OverviewPassElement.hpp"
 
 using namespace Hyprutils::String;
@@ -58,13 +59,12 @@ COverview::~COverview() {
         pMonitor->m_blurFBDirty = true;
 }
 
-COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn_), swipe(swipe_) {
+COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) :
+    SIDE_LENGTH(configValues->columns->value()), GAP_WIDTH(configValues->gapSize->value()), startedOn(startedOn_), swipe(swipe_) {
     const auto PMONITOR = Desktop::focusState()->monitor();
     pMonitor            = PMONITOR;
 
-    SIDE_LENGTH = configValues->columns->value();
-    GAP_WIDTH   = configValues->gapSize->value();
-    BG_COLOR    = CHyprColor(configValues->bgCol->value());
+    BG_COLOR = CHyprColor(configValues->bgCol->value());
 
     // process the method
     bool     methodCenter  = true;
@@ -79,7 +79,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
             methodStartID = pMonitor->activeWorkspaceID();
     }
 
-    images.resize(SIDE_LENGTH * SIDE_LENGTH);
+    images.resize(static_cast<long>(SIDE_LENGTH) * SIDE_LENGTH);
 
     // r includes empty workspaces; m skips over them
     std::string selector = configValues->skipEmpty->value() ? "m" : "r";
@@ -110,7 +110,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
         // Scan through workspaces higher than methodStartID. If using "m"
         // (skip_empty), stop when we wrap, leaving the rest of the workspace
         // ID's set to WORKSPACE_INVALID
-        for (size_t i = 0; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
+        for (size_t i = 0; i < static_cast<long>(SIDE_LENGTH * SIDE_LENGTH); ++i) {
             auto& image = images[i];
             if ((int64_t)i - backtracked < 0) {
                 currentID = getWorkspaceIDNameFromString(selector + std::to_string((int64_t)i - backtracked)).id;
@@ -135,7 +135,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
         // Scan through workspaces higher than methodStartID. If using "m"
         // (skip_empty), stop when we wrap, leaving the rest of the workspace
         // ID's set to WORKSPACE_INVALID
-        for (size_t i = 1; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
+        for (size_t i = 1; i < static_cast<long>(SIDE_LENGTH * SIDE_LENGTH); ++i) {
             auto& image = images[i];
             currentID   = getWorkspaceIDNameFromString(selector + "+" + std::to_string(i)).id;
             if (currentID <= methodStartID)
@@ -165,7 +165,7 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
 
     startedOn->m_visible = false;
 
-    for (size_t i = 0; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
+    for (size_t i = 0; i < static_cast<long>(SIDE_LENGTH * SIDE_LENGTH); ++i) {
         COverview::SWorkspaceImage& image = images[i];
         ensureFramebuffer(image, monbox, framebufferFormatWithAlpha(PMONITOR->m_output->state->state().drmFormat));
 
@@ -198,8 +198,8 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
         } else
             g_pHyprRenderer->renderWorkspace(PMONITOR, PWORKSPACE, Time::steadyNow(), monbox);
 
-        image.box = {(i % SIDE_LENGTH) * tileRenderSize.x + (i % SIDE_LENGTH) * GAP_WIDTH, (i / SIDE_LENGTH) * tileRenderSize.y + (i / SIDE_LENGTH) * GAP_WIDTH, tileRenderSize.x,
-                     tileRenderSize.y};
+        image.box = {((i % SIDE_LENGTH) * tileRenderSize.x) + ((i % SIDE_LENGTH) * GAP_WIDTH),
+                     ((static_cast<double>(i) / SIDE_LENGTH) * tileRenderSize.y) + ((static_cast<double>(i) / SIDE_LENGTH) * GAP_WIDTH), tileRenderSize.x, tileRenderSize.y};
 
         g_pHyprRenderer->m_renderData.blockScreenShader = true;
         g_pHyprRenderer->endRender();
@@ -275,7 +275,7 @@ void COverview::selectHoveredWorkspace() {
     // get tile x,y
     int x     = std::clamp((int)(lastMousePosLocal.x / pMonitor->m_size.x * SIDE_LENGTH), 0, SIDE_LENGTH - 1);
     int y     = std::clamp((int)(lastMousePosLocal.y / pMonitor->m_size.y * SIDE_LENGTH), 0, SIDE_LENGTH - 1);
-    closeOnID = std::clamp(x + y * SIDE_LENGTH, 0, SIDE_LENGTH * SIDE_LENGTH - 1);
+    closeOnID = std::clamp(x + (y * SIDE_LENGTH), 0, (SIDE_LENGTH * SIDE_LENGTH) - 1);
 }
 
 void COverview::redrawID(int id, bool forcelowres) {
@@ -300,7 +300,7 @@ void COverview::redrawID(int id, bool forcelowres) {
 
     Render::GL::g_pHyprOpenGL->makeEGLCurrent();
 
-    id = std::clamp(id, 0, SIDE_LENGTH * SIDE_LENGTH - 1);
+    id = std::clamp(id, 0, (SIDE_LENGTH * SIDE_LENGTH) - 1);
 
     Vector2D tileSize       = pMonitor->m_size / SIDE_LENGTH;
     Vector2D tileRenderSize = (pMonitor->m_size - Vector2D{GAP_WIDTH, GAP_WIDTH} * (SIDE_LENGTH - 1)) / SIDE_LENGTH;
@@ -361,7 +361,7 @@ void COverview::redrawID(int id, bool forcelowres) {
 void COverview::redrawAll(bool forcelowres) {
     if (!pMonitor)
         return;
-    for (size_t i = 0; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
+    for (size_t i = 0; i < static_cast<long>(SIDE_LENGTH * SIDE_LENGTH); ++i) {
         redrawID(i, forcelowres);
     }
 }
@@ -380,9 +380,10 @@ void COverview::onDamageReported() {
     Vector2D tileSize       = (SIZE / SIDE_LENGTH);
     Vector2D tileRenderSize = (SIZE - Vector2D{GAP_WIDTH, GAP_WIDTH} * (SIDE_LENGTH - 1)) / SIDE_LENGTH;
     // const auto& TILE           = images[std::clamp(openedID, 0, SIDE_LENGTH * SIDE_LENGTH)];
-    CBox texbox = CBox{(openedID % SIDE_LENGTH) * tileRenderSize.x + (openedID % SIDE_LENGTH) * GAP_WIDTH,
-                       (openedID / SIDE_LENGTH) * tileRenderSize.y + (openedID / SIDE_LENGTH) * GAP_WIDTH, tileRenderSize.x, tileRenderSize.y}
-                      .translate(pMonitor->m_position);
+    CBox texbox =
+        CBox{((openedID % SIDE_LENGTH) * tileRenderSize.x) + ((openedID % SIDE_LENGTH) * GAP_WIDTH),
+             ((static_cast<double>(openedID) / SIDE_LENGTH) * tileRenderSize.y) + ((static_cast<double>(openedID) / SIDE_LENGTH) * GAP_WIDTH), tileRenderSize.x, tileRenderSize.y}
+            .translate(pMonitor->m_position);
 
     damage();
 
@@ -405,7 +406,7 @@ void COverview::close(bool switchToSelection) {
         return;
 
     const int   ID     = closeOnID == -1 ? openedID : closeOnID;
-    const int   SAFEID = std::clamp(ID, 0, SIDE_LENGTH * SIDE_LENGTH - 1);
+    const int   SAFEID = std::clamp(ID, 0, (SIDE_LENGTH * SIDE_LENGTH) - 1);
 
     const auto& TILE = images[SAFEID];
 
@@ -463,7 +464,7 @@ void COverview::onWorkspaceChange() {
     else
         startedOn = pMonitor->m_activeWorkspace;
 
-    for (size_t i = 0; i < (size_t)(SIDE_LENGTH * SIDE_LENGTH); ++i) {
+    for (size_t i = 0; i < static_cast<long>(SIDE_LENGTH * SIDE_LENGTH); ++i) {
         if (images[i].workspaceID != pMonitor->activeWorkspaceID())
             continue;
 
@@ -503,18 +504,18 @@ void COverview::fullRender() {
 
     for (size_t y = 0; y < (size_t)SIDE_LENGTH; ++y) {
         for (size_t x = 0; x < (size_t)SIDE_LENGTH; ++x) {
-            CBox texbox = {x * tileRenderSize.x + x * GAPSIZE, y * tileRenderSize.y + y * GAPSIZE, tileRenderSize.x, tileRenderSize.y};
+            CBox texbox = {(x * tileRenderSize.x) + (x * GAPSIZE), (y * tileRenderSize.y) + (y * GAPSIZE), tileRenderSize.x, tileRenderSize.y};
             texbox.scale(pMonitor->m_scale).translate(pos->value());
             texbox.round();
             CRegion damage{0, 0, INT16_MAX, INT16_MAX};
-            auto&   image = images[x + y * SIDE_LENGTH];
+            auto&   image = images[x + (y * SIDE_LENGTH)];
             Render::GL::g_pHyprOpenGL->renderTextureInternal(image.fb->getTexture(), texbox, {.damage = &damage, .a = 1.0});
         }
     }
 }
 
 static float lerp(const float& from, const float& to, const float perc) {
-    return (to - from) * perc + from;
+    return ((to - from) * perc) + from;
 }
 
 static Vector2D lerp(const Vector2D& from, const Vector2D& to, const float perc) {

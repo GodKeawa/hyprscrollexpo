@@ -26,9 +26,9 @@ using namespace Hyprutils::String;
 #include "OverviewPassElement.hpp"
 
 // Methods
-inline CFunctionHook* g_pRenderWorkspaceHook = nullptr;
-inline CFunctionHook* g_pAddDamageHookA      = nullptr;
-inline CFunctionHook* g_pAddDamageHookB      = nullptr;
+static inline CFunctionHook* g_pRenderWorkspaceHook = nullptr;
+static inline CFunctionHook* g_pAddDamageHookA      = nullptr;
+static inline CFunctionHook* g_pAddDamageHookB      = nullptr;
 typedef void (*origRenderWorkspace)(void*, PHLMONITOR, PHLWORKSPACE, const Time::steady_tp&, const CBox&);
 typedef void (*origAddDamageA)(void*, const CBox&);
 typedef void (*origAddDamageB)(void*, const pixman_region32_t*);

@@ -2,6 +2,7 @@
 
 #include "overview.hpp"
 
+#include <algorithm>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/desktop/state/FocusState.hpp>
 #include <hyprland/src/helpers/Monitor.hpp>
@@ -31,8 +32,7 @@ void CExpoGesture::update(const ITrackpadGesture::STrackpadGestureUpdate& e) {
 
     m_lastDelta += distance(e);
 
-    if (m_lastDelta <= 0.01) // plugin will crash if swipe ends at <= 0
-        m_lastDelta = 0.01;
+    m_lastDelta = std::max<double>(m_lastDelta, 0.01); // plugin will crash if swipe ends at <= 0
 
     g_pOverview->onSwipeUpdate(m_lastDelta);
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <desktop/DesktopTypes.hpp>
 #include <hyprland/src/helpers/memory/Memory.hpp>
 
 class IOverview {

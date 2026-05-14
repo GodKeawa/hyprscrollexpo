@@ -1,5 +1,5 @@
 #include "scrollOverview.hpp"
-#include <any>
+#include <algorithm>
 #define private   public
 #define protected public
 #include <hyprland/src/render/Renderer.hpp>
@@ -20,7 +20,7 @@
 #undef private
 #undef protected
 
-#include "OverviewPassElement.hpp"
+#include "globals.hpp"
 
 using namespace Hyprutils::String;
 
@@ -60,7 +60,7 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
             images.emplace_back(makeShared<SWorkspaceImage>(w.lock()));
     }
 
-    std::sort(images.begin(), images.end(), [](const auto& a, const auto& b) { return a->pWorkspace->m_id < b->pWorkspace->m_id; });
+    std::ranges::sort(images, [](const auto& a, const auto& b) { return a->pWorkspace->m_id < b->pWorkspace->m_id; });
 
     g_pAnimationManager->createAnimation(1.F, scale, Config::animationTree()->getAnimationPropertyConfig("windowsMove"), AVARDAMAGE_NONE);
     g_pAnimationManager->createAnimation(Vector2D{}, viewOffset, Config::animationTree()->getAnimationPropertyConfig("windowsMove"), AVARDAMAGE_NONE);
@@ -211,7 +211,7 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
                 moveViewportWorkspace(e.delta > 0);
             }
         } else {
-            const float VAL = std::clamp(sc<float>(scale->value() + e.delta / -500.F), 0.05F, 0.95F);
+            const float VAL = std::clamp(sc<float>(scale->value() + (e.delta / -500.F)), 0.05F, 0.95F);
             *scale          = VAL;
         }
     });
@@ -284,7 +284,7 @@ void CScrollOverview::selectHoveredWorkspace() {
 
     const auto VIEWPORT_CENTER = CBox{{}, pMonitor->m_size}.middle();
     const float slotHeight = pMonitor->m_size.y * scale->value();
-    const float topOffset = VIEWPORT_CENTER.y * (1.0f - scale->value()) - viewOffset->value().y * scale->value();
+    const float topOffset = (VIEWPORT_CENTER.y * (1.0f - scale->value())) - (viewOffset->value().y * scale->value());
 
     // Determine workspace based on vertical slots (no gaps)
     int hoveredIdx = std::floor((lastMousePosLocal.y - topOffset) / slotHeight) + (int)activeIdx;
@@ -439,7 +439,7 @@ void CScrollOverview::redrawWorkspace(PHLWORKSPACE workspace, bool forcelowres) 
     }
 
     // Sort windows to preserve rendering order (z-order): Tiled -> Floating -> Fullscreen
-    std::stable_sort(windows.begin(), windows.end(), [](const PHLWINDOW& a, const PHLWINDOW& b) {
+    std::ranges::stable_sort(windows, [](const PHLWINDOW& a, const PHLWINDOW& b) {
         auto getZLevel = [](const PHLWINDOW& w) -> int {
             if (w->isFullscreen())
                 return 2;
@@ -752,7 +752,7 @@ void CScrollOverview::fullRender() {
 }
 
 static float hyprlerp(const float& from, const float& to, const float perc) {
-    return (to - from) * perc + from;
+    return ((to - from) * perc) + from;
 }
 
 static Vector2D hyprlerp(const Vector2D& from, const Vector2D& to, const float perc) {
