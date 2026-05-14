@@ -2,6 +2,7 @@
 HyprExpoScroll is an overview plugin like niri. Forked from hyprland-plugins:hyprexpo as the original plugin is no longer maintained.
 
 Only supports latest hyprland, not -git. Not actively maintained.
+Currently supports Hyprland V0.55.0-4.
 
 https://github.com/user-attachments/assets/c5102f6a-d43c-4c24-8f65-e7308691e8c5
 
@@ -47,8 +48,8 @@ layout | string | overview rendering style, set to `scrolling` to use scrollable
 scrolling:scroll_moves_up_down | integer | `1` means scroll wheel moves workplaces vertically, `0` zooming | `1`
 scrolling:follow_mouse | integer | `1` means focus follows mouse, `0` don't | `1`
 scrolling:default_zoom | float | the zoom scale for windows in scroll layout | `0.5`
-scrolling:active_color | color | the color of the border of the active workspace in scroll layout | `rgba(33ccffee)`
-scrolling:inactive_color | color | the color of the border of the inactive workspaces in scroll layout | `rgba(595959aa)`
+scrolling:active_color | color | the color of the border of the active window in scroll layout | `rgba(33ccffee)`
+scrolling:inactive_color | color | the color of the border of the inactive windows in scroll layout | `rgba(595959aa)`
 
 ### Keywords
 
