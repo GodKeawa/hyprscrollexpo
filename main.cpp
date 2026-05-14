@@ -7,10 +7,6 @@
 #include <hyprland/src/desktop/view/Window.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/config/shared/actions/ConfigActions.hpp>
-#include <hyprland/src/config/values/types/ColorValue.hpp>
-#include <hyprland/src/config/values/types/FloatValue.hpp>
-#include <hyprland/src/config/values/types/IntValue.hpp>
-#include <hyprland/src/config/values/types/StringValue.hpp>
 #include <hyprland/src/desktop/DesktopTypes.hpp>
 #include <hyprland/src/helpers/time/Time.hpp>
 #include <hyprland/src/render/Renderer.hpp>
@@ -48,7 +44,13 @@ static bool       renderingOverview = false;
 
 const std::string KEYWORD_EXPO_GESTURE = "hyprexpo-gesture";
 
-//
+// -----------------------------------------------------------------------------------------
+// [核心 Hook]: 渲染接管 (Render Workspace)
+// 当 Overview 激活时，我们将拦截 Hyprland 对底层 Workspace 的常规渲染。
+// 这里的机制是跳过原生的 Workspace 渲染，并调用 g_pOverview->render() 触发我们自己的逻辑。
+// [未来 Niri 改造注意]: 如果要保留 Bar (Layer Surface)，可能需要修改此处的接管逻辑，
+// 或者在后续阶段(如 RENDER_LAST_MOMENT)重新补画 UI Layer。
+// -----------------------------------------------------------------------------------------
 static void hkRenderWorkspace(void* thisptr, PHLMONITOR pMonitor, PHLWORKSPACE pWorkspace, const Time::steady_tp& now, const CBox& geometry) {
     if (!g_pOverview || renderingOverview || g_pOverview->blockOverviewRendering || g_pOverview->pMonitor != pMonitor)
         ((origRenderWorkspace)(g_pRenderWorkspaceHook->m_original))(thisptr, pMonitor, pWorkspace, now, geometry);
@@ -185,16 +187,6 @@ static void failNotif(const std::string& reason) {
     HyprlandAPI::addNotification(PHANDLE, "[hyprexpo] Failure in initialization: " + reason, CHyprColor{1.0, 0.2, 0.2, 1.0}, 5000);
 }
 
-static bool addConfigValue(SP<Config::Values::IValue> value) {
-    const auto RET = Config::mgr()->registerPluginValue(PHANDLE, value);
-    if (!RET) {
-        Log::logger->log(Log::ERR, "[hyprexpo] failed to register plugin value \"{}\": {}", value->name(), RET.error());
-        return false;
-    }
-
-    return true;
-}
-
 static Hyprlang::CParseResult expoGestureKeyword(const char* LHS, const char* RHS) {
     Hyprlang::CParseResult result;
 
@@ -326,6 +318,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
         g_pOverview->onPreRender();
     });
 
+    // -----------------------------------------------------------------------------------------
+    // [渲染阶段监听]: 注入自定义渲染通道 (Render Pass)
+    // 默认在 RENDER_LAST_MOMENT（所有原生层渲染完成后的最后时刻）执行 COverviewPassElement
+    // [未来 Niri 改造方案 A]: 想要保留 Waybar，可以将此处的注入阶段提前，比如改为 RENDER_PRE_WINDOW，
+    // 这样后续的 UI Layer 就能盖在 Overview 的上面。
+    // -----------------------------------------------------------------------------------------
     static auto P_STAGE = Event::bus()->m_events.render.stage.listen([](eRenderStage stage) {
         if (stage == RENDER_LAST_MOMENT && g_pOverview) {
             g_pHyprRenderer->m_renderPass.add(makeUnique<COverviewPassElement>());
@@ -335,21 +333,34 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addDispatcherV2(PHANDLE, "hyprexpo:expo", ::onExpoDispatcher);
     HyprlandAPI::addLuaFunction(PHANDLE, "hyprexpo", "expo", ::luaExpo);
 
-    HyprlandAPI::addConfigKeyword(PHANDLE, KEYWORD_EXPO_GESTURE, ::expoGestureKeyword, {true});
+    configValues.layout = makeShared<Config::Values::CStringValue>("plugin:hyprexpo:layout", "layout", "grid");
 
-    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:columns", "columns", 3));
-    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:gap_size", "gap size", 5));
-    addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:bg_col", "background color", 0xFF111111));
-    addConfigValue(makeShared<Config::Values::CStringValue>("plugin:hyprexpo:workspace_method", "workspace method", "center current"));
-    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:skip_empty", "skip empty workspaces", 0));
-    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:gesture_distance", "gesture distance", 200));
+    configValues.columns         = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:columns", "columns", 3);
+    configValues.gapSize         = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:gap_size", "gap size", 5);
+    configValues.bgCol           = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:grid:bg_col", "background color", 0xFF111111);
+    configValues.workspaceMethod = makeShared<Config::Values::CStringValue>("plugin:hyprexpo:grid:workspace_method", "workspace method", "center current");
+    configValues.skipEmpty       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:skip_empty", "skip empty workspaces", 0);
+    configValues.gestureDistance = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:grid:gesture_distance", "gesture distance", 200);
 
-    addConfigValue(makeShared<Config::Values::CStringValue>("plugin:hyprexpo:layout", "layout", "grid"));
-    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:scroll_moves_up_down", "scroll moves up/down", 1));
-    addConfigValue(makeShared<Config::Values::CFloatValue>("plugin:hyprexpo:scrolling:default_zoom", "default zoom", 0.5f));
-    addConfigValue(makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:follow_mouse", "scroll follow mouse", 1));
-    addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:active_color", "scroll active color", 0x33CCFFEE));
-    addConfigValue(makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:inactive_color", "scroll inactive color", 0x595959AA));
+    configValues.scrollMovesUpDown = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:scroll_moves_up_down", "scroll moves up/down", 1);
+    configValues.defaultZoom       = makeShared<Config::Values::CFloatValue>("plugin:hyprexpo:scrolling:default_zoom", "default zoom", 0.5f);
+    configValues.followMouse       = makeShared<Config::Values::CIntValue>("plugin:hyprexpo:scrolling:follow_mouse", "scroll follow mouse", 1);
+    configValues.activeColor       = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:active_color", "scroll active color", 0x33CCFFEE);
+    configValues.inactiveColor     = makeShared<Config::Values::CColorValue>("plugin:hyprexpo:scrolling:inactive_color", "scroll inactive color", 0x595959AA);
+
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.columns);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.gapSize);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.bgCol);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.workspaceMethod);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.skipEmpty);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.gestureDistance);
+
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.layout);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.scrollMovesUpDown);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.defaultZoom);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.followMouse);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.activeColor);
+    HyprlandAPI::addConfigValueV2(PHANDLE, configValues.inactiveColor);
 
     return {"hyprexpo", "A plugin for an overview", "Vaxry", "1.0"};
 }

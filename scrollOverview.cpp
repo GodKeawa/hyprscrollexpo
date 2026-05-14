@@ -118,6 +118,12 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
             moveViewportWorkspace(e.delta > 0);
     });
 
+    // -----------------------------------------------------------------------------------------
+    // [输入事件]: 鼠标与触摸按键监听
+    // 目前仅绑定到 `onCursorSelect` 上，用于处理点击选中工作区/窗口并关闭 Overview。
+    // [未来 Niri 改造注意]: 如果要实现拖拽窗口，可以在这里拦截 `e.state == WL_POINTER_BUTTON_STATE_PRESSED`，
+    // 获取当前鼠标下的窗口并设置 `isDragging = true` 的状态标识。
+    // -----------------------------------------------------------------------------------------
     mouseButtonHook = Event::bus()->m_events.input.mouse.button.listen([onCursorSelect](IPointer::SButtonEvent e, Event::SCallbackInfo& info) { onCursorSelect(info); });
     touchDownHook   = Event::bus()->m_events.input.touch.down.listen([onCursorSelect](ITouch::SDownEvent e, Event::SCallbackInfo& info) { onCursorSelect(info); });
 
@@ -418,6 +424,12 @@ void CScrollOverview::redrawAll(bool forcelowres) {
             g_pHyprRenderer->renderLayer(ls.lock(), pMonitor.lock(), Time::steadyNow());
     }
 
+    // -----------------------------------------------------------------------------------------
+    // [未来 Niri 改造方案 B]: 主动重绘 Bar (Layer Surfaces)
+    // 如果决定在 RENDER_LAST_MOMENT 保留状态栏，可在此处遍历 pMonitor->m_layerSurfaceLayers 的 [1], [2], [3]
+    // 强制调用 renderLayer 将 Waybar 盖在 Overview 界面之上。
+    // -----------------------------------------------------------------------------------------
+
     g_pHyprRenderer->m_renderData.blockScreenShader = true;
     g_pHyprRenderer->endRender();
 }
@@ -463,7 +475,8 @@ void CScrollOverview::close(bool switchToSelection) {
             auto OLDWS = startedOn;
 
             pMonitor->m_activeWorkspace = startedOn;
-            Config::Actions::changeWorkspace(closeOnWorkspace);
+            if (!Config::Actions::changeWorkspace(closeOnWorkspace))
+                Log::logger->log(Log::ERR, "[hyprexpo] Failed to change workspace on overview close");
 
             g_pDesktopAnimationManager->startAnimation(closeOnWorkspace, CDesktopAnimationManager::ANIMATION_TYPE_IN, true, true);
             g_pDesktopAnimationManager->startAnimation(OLDWS, CDesktopAnimationManager::ANIMATION_TYPE_OUT, false, true);
@@ -590,6 +603,11 @@ void CScrollOverview::fullRender() {
 
             CBox texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, pMonitor->m_size};
 
+            // -----------------------------------------------------------------------------------------
+            // [矩阵与坐标变换]: 窗口缩放与位移
+            // 将窗口的原坐标转化为基于视图中心点的相对缩放，加上滚动带来的偏移 yoff
+            // [未来 Niri 改造注意]: 若实现了窗口拖拽，可在此处根据拖拽的实时 Delta 偏移，临时累加到 texbox 的 translate 中
+            // -----------------------------------------------------------------------------------------
             // scale the box to the viewport center
             texbox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
 
@@ -604,6 +622,18 @@ void CScrollOverview::fullRender() {
 
         if (dirty)
             std::erase_if(wimg->windowImages, [](const auto& e) { return !e->pWindow; });
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // [模块]: 主动重绘 Bar (Layer Surfaces) 实施方案 B
+    // 渲染完所有的工作区与窗口后，在此将顶层的 1(bottom), 2(top), 3(overlay) 重新画在最前面，
+    // 从而保证 Waybar 和 Mako 通知等不受遮挡
+    // -----------------------------------------------------------------------------------------
+    for (int i = 1; i <= 3; ++i) {
+        for (auto& ls : pMonitor->m_layerSurfaceLayers[i]) {
+            if (validMapped(ls))
+                g_pHyprRenderer->renderLayer(ls.lock(), pMonitor.lock(), Time::steadyNow());
+        }
     }
 }
 

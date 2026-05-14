@@ -261,6 +261,12 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) : startedOn(startedOn
         close();
     };
 
+    // -----------------------------------------------------------------------------------------
+    // [输入事件]: 鼠标与触摸按键监听
+    // 目前处理的都是基于 `lastMousePosLocal` 换算宫格矩阵点击哪个 Workspace 贴图。
+    // [未来 Niri 改造注意]: 受限于上述的“拍扁贴图”架构，这里无法像 Scroll 模式那样
+    // 判断鼠标是否精准点击了某个特定窗口。
+    // -----------------------------------------------------------------------------------------
     mouseMoveHook = Event::bus()->m_events.input.mouse.move.listen([onCursorMove](Vector2D, Event::SCallbackInfo& info) { onCursorMove(info); });
     touchMoveHook = Event::bus()->m_events.input.touch.motion.listen([onCursorMove](ITouch::SMotionEvent, Event::SCallbackInfo& info) { onCursorMove(info); });
 
@@ -279,6 +285,15 @@ void COverview::selectHoveredWorkspace() {
 }
 
 void COverview::redrawID(int id, bool forcelowres) {
+    // -----------------------------------------------------
+    // [模块]: 工作区级渲染捕获 (Workspace-level Framebuffer)
+    // 注意：与 ScrollOverview 渲染单个窗口不同，Grid 模式直接调用
+    // g_pHyprRenderer->renderWorkspace 将整个工作区“拍扁”成一张贴图！
+    // 这种机制极大地节省了性能（不用遍历所有窗口），但代价是丢失了窗口级的信息。
+    // [Niri 改造痛点]: 无法单独摘出某个窗口进行拖拽或高亮，因为图层已经被合并了。
+    // 如果想要在 Grid 模式实现窗口拖拽，必须像 Scroll 模式那样重构，
+    // 改为按 Z 轴遍历窗口并单独分配 Framebuffer。
+    // -----------------------------------------------------
     if (!pMonitor)
         return;
 
@@ -424,10 +439,13 @@ void COverview::close(bool switchToSelection) {
 
         const auto OLDWS = pMonitor->m_activeWorkspace;
 
-        if (!NEWIDWS)
-            Config::Actions::changeWorkspace(std::to_string(NEWID));
-        else
-            Config::Actions::changeWorkspace(NEWIDWS->getConfigName());
+        if (!NEWIDWS) {
+            if (!Config::Actions::changeWorkspace(std::to_string(NEWID)))
+                Log::logger->log(Log::ERR, "[hyprexpo] Failed to change workspace to ID {}", NEWID);
+        } else {
+            if (!Config::Actions::changeWorkspace(NEWIDWS->getConfigName()))
+                Log::logger->log(Log::ERR, "[hyprexpo] Failed to change workspace to {}", NEWIDWS->getConfigName());
+        }
 
         g_pDesktopAnimationManager->startAnimation(pMonitor->m_activeWorkspace, CDesktopAnimationManager::ANIMATION_TYPE_IN, true, true);
         g_pDesktopAnimationManager->startAnimation(OLDWS, CDesktopAnimationManager::ANIMATION_TYPE_OUT, false, true);
@@ -469,6 +487,12 @@ void COverview::render() {
 }
 
 void COverview::fullRender() {
+    // -----------------------------------------------------
+    // [模块]: Grid 模式主渲染管道
+    // 遍历预先捕获的整个 Workspace Framebuffer，并按宫格矩阵计算坐标贴上去。
+    // [未来 Niri 改造注意]: 若要像方案 B 那样保留 Bar，可在此方法的最末尾
+    // (for循环外) 补充渲染 pMonitor->m_layerSurfaceLayers[1-3]。
+    // -----------------------------------------------------
     const auto GAPSIZE = (closing ? (1.0 - size->getPercent()) : size->getPercent()) * GAP_WIDTH;
 
     if (pMonitor->m_activeWorkspace != startedOn && !closing) {
@@ -491,6 +515,18 @@ void COverview::fullRender() {
             CRegion damage{0, 0, INT16_MAX, INT16_MAX};
             auto&   image = images[x + y * SIDE_LENGTH];
             Render::GL::g_pHyprOpenGL->renderTextureInternal(image.fb->getTexture(), texbox, {.damage = &damage, .a = 1.0});
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // [模块]: 主动重绘 Bar (Layer Surfaces) 实施方案 B
+    // 渲染完所有的工作区与窗口后，在此将顶层的 1(bottom), 2(top), 3(overlay) 重新画在最前面，
+    // 从而保证 Waybar 和 Mako 通知等不受遮挡
+    // -----------------------------------------------------------------------------------------
+    for (int i = 1; i <= 3; ++i) {
+        for (auto& ls : pMonitor->m_layerSurfaceLayers[i]) {
+            if (validMapped(ls))
+                g_pHyprRenderer->renderLayer(ls.lock(), pMonitor.lock(), Time::steadyNow());
         }
     }
 }
