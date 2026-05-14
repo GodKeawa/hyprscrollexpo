@@ -1,6 +1,6 @@
 #include "scrollOverview.hpp"
 #include <any>
-#define private public
+#define private   public
 #define protected public
 #include <hyprland/src/render/Renderer.hpp>
 #include <hyprland/src/Compositor.hpp>
@@ -51,14 +51,14 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
     // [模块]: 初始化和设置
     // 负责收集工作区状态、初始化动画变量以及挂载各种输入/窗口事件监听器
     // -----------------------------------------------------
-    static const CConfigValue<Config::FLOAT> PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
+    static const CConfigValue<Config::FLOAT>   PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
     static const CConfigValue<Config::INTEGER> ACOL("plugin:hyprexpo:scrolling:active_color");
     static const CConfigValue<Config::INTEGER> ICOL("plugin:hyprexpo:scrolling:inactive_color");
-    ACTIVE_COLOR = CHyprColor(*ACOL);
+    ACTIVE_COLOR   = CHyprColor(*ACOL);
     INACTIVE_COLOR = CHyprColor(*ICOL);
 
     const auto PMONITOR = Desktop::focusState()->monitor();
-    pMonitor                     = PMONITOR;
+    pMonitor            = PMONITOR;
 
     for (const auto& w : g_pCompositor->m_workspaces) {
         if (w && w->m_monitor == pMonitor && !w->m_isSpecialWorkspace)
@@ -113,7 +113,7 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
             *viewOffset = viewOffset->value() + Vector2D{e.delta, 0.0};
         } else if (!*PZOOM) {
             const float VAL = std::clamp(sc<float>(scale->value() + e.delta / -500.F), 0.05F, 0.95F);
-            *scale         = VAL;
+            *scale          = VAL;
         } else
             moveViewportWorkspace(e.delta > 0);
     });
@@ -164,8 +164,8 @@ void CScrollOverview::selectHoveredWorkspace() {
 
     const auto VIEWPORT_CENTER = CBox{{}, pMonitor->m_size}.middle();
 
-    float yoff = -(float)activeIdx * pMonitor->m_size.y * scale->value();
-    
+    float      yoff = -(float)activeIdx * pMonitor->m_size.y * scale->value();
+
     // First pass: Check if we hit any workspace background
     for (const auto& wimg : images) {
         CBox workspaceBox = {{}, pMonitor->m_size};
@@ -180,12 +180,12 @@ void CScrollOverview::selectHoveredWorkspace() {
     }
 
     // Second pass: Check if we hit any windows
-    yoff = -(float)activeIdx * pMonitor->m_size.y * scale->value();
+    yoff       = -(float)activeIdx * pMonitor->m_size.y * scale->value();
     bool found = false;
     for (const auto& wimg : images) {
         for (auto it = wimg->windowImages.rbegin(); it != wimg->windowImages.rend(); ++it) {
-            const auto& img = *it;
-            CBox texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, img->pWindow->m_realSize->value()};
+            const auto& img    = *it;
+            CBox        texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, img->pWindow->m_realSize->value()};
 
             // scale the box to the viewport center
             texbox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
@@ -193,9 +193,9 @@ void CScrollOverview::selectHoveredWorkspace() {
             texbox.translate({0.F, yoff});
 
             if (texbox.containsPoint(lastMousePosLocal)) {
-                closeOnWindow = img->pWindow;
+                closeOnWindow    = img->pWindow;
                 closeOnWorkspace = wimg->pWorkspace;
-                found = true;
+                found            = true;
                 break;
             }
         }
@@ -234,11 +234,11 @@ void CScrollOverview::moveViewportWorkspace(bool up) {
 
     if (!*PFOLLOWMOUSE) {
         // Auto focus workspace ONLY when follow_mouse is OFF
-        const auto PMONITOR = pMonitor.lock();
-        PHLWORKSPACE pWS = images[viewportCurrentWorkspace]->pWorkspace;
+        const auto   PMONITOR = pMonitor.lock();
+        PHLWORKSPACE pWS      = images[viewportCurrentWorkspace]->pWorkspace;
         if (pWS && pWS != PMONITOR->m_activeWorkspace) {
             PMONITOR->changeWorkspace(pWS, true, true, true);
-            
+
             // Find first window to focus
             for (auto& w : g_pCompositor->m_windows) {
                 if (w->m_workspace == pWS && validMapped(w)) {
@@ -272,24 +272,27 @@ void CScrollOverview::updateHoverFocus() {
         return;
 
     const auto VIEWPORT_CENTER = CBox{{}, pMonitor->m_size}.middle();
-    size_t activeIdx = 0;
+    size_t     activeIdx       = 0;
     for (size_t i = 0; i < images.size(); ++i) {
-        if (images[i]->pWorkspace == startedOn) { activeIdx = i; break; }
+        if (images[i]->pWorkspace == startedOn) {
+            activeIdx = i;
+            break;
+        }
     }
 
     float yoff = -(float)activeIdx * pMonitor->m_size.y * scale->value();
     for (const auto& wimg : images) {
         for (auto it = wimg->windowImages.rbegin(); it != wimg->windowImages.rend(); ++it) {
-             const auto& img = *it;
-             CBox texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, img->pWindow->m_realSize->value()};
-             texbox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
-             texbox.translate({0.F, yoff});
-             if (texbox.containsPoint(lastMousePosLocal)) {
-                 if (img->pWindow != Desktop::focusState()->window()) {
-                     Desktop::focusState()->fullWindowFocus(img->pWindow.lock(), Desktop::FOCUS_REASON_KEYBIND);
-                 }
-                 return;
-             }
+            const auto& img    = *it;
+            CBox        texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, img->pWindow->m_realSize->value()};
+            texbox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
+            texbox.translate({0.F, yoff});
+            if (texbox.containsPoint(lastMousePosLocal)) {
+                if (img->pWindow != Desktop::focusState()->window()) {
+                    Desktop::focusState()->fullWindowFocus(img->pWindow.lock(), Desktop::FOCUS_REASON_KEYBIND);
+                }
+                return;
+            }
         }
         yoff += pMonitor->m_size.y * scale->value();
     }
@@ -314,14 +317,14 @@ void CScrollOverview::redrawWorkspace(PHLWORKSPACE workspace, bool forcelowres) 
 
     image->windowImages.clear();
 
-    const auto PMONITOR = pMonitor.lock();
-    const auto OLD_WORKSPACE = PMONITOR->m_activeWorkspace;
-    const bool OLD_VISIBLE = workspace->m_visible;
-    const Vector2D OLD_MON_SIZE = PMONITOR->m_size;
+    const auto     PMONITOR      = pMonitor.lock();
+    const auto     OLD_WORKSPACE = PMONITOR->m_activeWorkspace;
+    const bool     OLD_VISIBLE   = workspace->m_visible;
+    const Vector2D OLD_MON_SIZE  = PMONITOR->m_size;
 
     PMONITOR->m_activeWorkspace = workspace;
-    workspace->m_visible = true;
-    PMONITOR->m_size = {30000, 30000}; // Hack to bypass isWindowVisible for off-screen scrolling windows
+    workspace->m_visible        = true;
+    PMONITOR->m_size            = {30000, 30000}; // Hack to bypass isWindowVisible for off-screen scrolling windows
 
     std::vector<PHLWINDOW> windows;
     for (const auto& w : g_pCompositor->m_windows) {
@@ -333,8 +336,10 @@ void CScrollOverview::redrawWorkspace(PHLWORKSPACE workspace, bool forcelowres) 
     // Sort windows to preserve rendering order (z-order): Tiled -> Floating -> Fullscreen
     std::stable_sort(windows.begin(), windows.end(), [](const PHLWINDOW& a, const PHLWINDOW& b) {
         auto getZLevel = [](const PHLWINDOW& w) -> int {
-            if (w->isFullscreen()) return 2;
-            if (w->m_isFloating) return 1;
+            if (w->isFullscreen())
+                return 2;
+            if (w->m_isFloating)
+                return 1;
             return 0;
         };
         return getZLevel(a) < getZLevel(b);
@@ -343,11 +348,11 @@ void CScrollOverview::redrawWorkspace(PHLWORKSPACE workspace, bool forcelowres) 
     for (const auto& w : windows) {
         auto img     = image->windowImages.emplace_back(makeShared<SWindowImage>());
         img->pWindow = w;
-        img->fb = g_pHyprRenderer->createFB("hyprexpo");
+        img->fb      = g_pHyprRenderer->createFB("hyprexpo");
         img->fb->alloc(pMonitor->m_pixelSize.x, pMonitor->m_pixelSize.y, pMonitor->m_output->state->state().drmFormat);
-        
+
         if (w->wlSurface() && w->wlSurface()->resource()) {
-            img->windowCommit = w->wlSurface()->resource()->m_events.commit.listen([wk = WP<SWindowImage>{img}] () {
+            img->windowCommit = w->wlSurface()->resource()->m_events.commit.listen([wk = WP<SWindowImage>{img}]() {
                 if (!wk || !wk->pWindow)
                     return;
 
@@ -364,8 +369,8 @@ void CScrollOverview::redrawWorkspace(PHLWORKSPACE workspace, bool forcelowres) 
     }
 
     PMONITOR->m_activeWorkspace = OLD_WORKSPACE;
-    workspace->m_visible = OLD_VISIBLE;
-    PMONITOR->m_size = OLD_MON_SIZE;
+    workspace->m_visible        = OLD_VISIBLE;
+    PMONITOR->m_size            = OLD_MON_SIZE;
 
     blockOverviewRendering = false;
 }
@@ -424,7 +429,7 @@ void CScrollOverview::damage() {
 }
 
 void CScrollOverview::onDamageReported() {
-    ; 
+    ;
 }
 
 int64_t CScrollOverview::selectedWorkspaceID() const {
@@ -488,7 +493,7 @@ void CScrollOverview::close(bool switchToSelection) {
                 targetIdx = i;
             }
         }
-        
+
         *viewOffset = Vector2D{viewOffset->value().x, (sc<double>(targetIdx) - sc<double>(activeIdx)) * pMonitor->m_size.y};
     } else {
         *viewOffset = Vector2D{};
@@ -504,7 +509,7 @@ void CScrollOverview::onPreRender() {
 }
 
 void CScrollOverview::onWorkspaceChange() {
-    ; 
+    ;
 }
 
 void CScrollOverview::render() {
@@ -566,21 +571,21 @@ void CScrollOverview::fullRender() {
 
             // Render border
             {
-                 CBox borderBox = windowBox;
-                 borderBox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
-                 borderBox.translate({0.F, yoff});
-                 
-                 borderBox.expand(4 * scale->value());
-                 borderBox.scale(pMonitor->m_scale).round();
-                 
-                 CHyprColor col;
-                 if (img->pWindow == Desktop::focusState()->window()) {
-                     col = ACTIVE_COLOR;
-                 } else {
-                     col = INACTIVE_COLOR;
-                 }
+                CBox borderBox = windowBox;
+                borderBox.translate(-VIEWPORT_CENTER).scale(scale->value()).translate(VIEWPORT_CENTER).translate(-viewOffset->value() * scale->value());
+                borderBox.translate({0.F, yoff});
 
-                 Render::GL::g_pHyprOpenGL->renderRect(borderBox, col, Render::GL::CHyprOpenGLImpl::SRectRenderData{.round = (int)(5 * pMonitor->m_scale)});
+                borderBox.expand(4 * scale->value());
+                borderBox.scale(pMonitor->m_scale).round();
+
+                CHyprColor col;
+                if (img->pWindow == Desktop::focusState()->window()) {
+                    col = ACTIVE_COLOR;
+                } else {
+                    col = INACTIVE_COLOR;
+                }
+
+                Render::GL::g_pHyprOpenGL->renderRect(borderBox, col, Render::GL::CHyprOpenGLImpl::SRectRenderData{.round = (int)(5 * pMonitor->m_scale)});
             }
 
             CBox texbox = {img->pWindow->m_realPosition->value() - pMonitor->m_position, pMonitor->m_size};
@@ -592,12 +597,9 @@ void CScrollOverview::fullRender() {
 
             texbox.scale(pMonitor->m_scale).round();
             CRegion damage{0, 0, INT16_MAX, INT16_MAX};
-            Render::GL::g_pHyprOpenGL->renderTextureInternal(img->fb->getTexture(), texbox, {
-                .damage = &damage, 
-                .a = (float)img->pWindow->m_alpha.value()
-            });
+            Render::GL::g_pHyprOpenGL->renderTextureInternal(img->fb->getTexture(), texbox, {.damage = &damage, .a = (float)img->pWindow->m_alpha.value()});
         }
-        
+
         yoff += pMonitor->m_size.y * scale->value();
 
         if (dirty)
@@ -630,7 +632,7 @@ void CScrollOverview::resetSwipe() {
 }
 
 void CScrollOverview::onSwipeUpdate(double delta) {
-    static const CConfigValue<Config::FLOAT> PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
+    static const CConfigValue<Config::FLOAT>   PDEFAULTZOOM("plugin:hyprexpo:scrolling:default_zoom");
     static const CConfigValue<Config::INTEGER> PDISTANCE("plugin:hyprexpo:gesture_distance");
 
     m_isSwiping = true;

@@ -34,11 +34,11 @@ class COverview : public IOverview {
     virtual void onSwipeEnd();
 
     // close without a selection
-    virtual void          close(bool switchToSelection = true);
-    virtual void          selectHoveredWorkspace();
-    virtual int64_t       selectedWorkspaceID() const;
+    virtual void    close(bool switchToSelection = true);
+    virtual void    selectHoveredWorkspace();
+    virtual int64_t selectedWorkspaceID() const;
 
-    virtual void          fullRender();
+    virtual void    fullRender();
 
     struct SWorkspaceImage {
         SP<Render::IFramebuffer> fb;
@@ -76,9 +76,9 @@ class COverview : public IOverview {
     bool                         swipeWasCommenced = false;
 
   private:
-    void                         redrawID(int id, bool forcelowres = false);
-    void                         redrawAll(bool forcelowres = false);
-    void                         onWorkspaceChange();
+    void redrawID(int id, bool forcelowres = false);
+    void redrawAll(bool forcelowres = false);
+    void onWorkspaceChange();
 
     friend class COverviewPassElement;
 };

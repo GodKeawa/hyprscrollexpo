@@ -30,11 +30,11 @@ class CScrollOverview : public IOverview {
     virtual void onSwipeEnd();
 
     // close without a selection
-    virtual void close(bool switchToSelection = true);
-    virtual void selectHoveredWorkspace();
+    virtual void    close(bool switchToSelection = true);
+    virtual void    selectHoveredWorkspace();
     virtual int64_t selectedWorkspaceID() const;
 
-    virtual void fullRender();
+    virtual void    fullRender();
 
   private:
     void   updateHoverFocus();
@@ -48,11 +48,11 @@ class CScrollOverview : public IOverview {
     size_t viewportCurrentWorkspace = 0;
 
     struct SWindowImage {
-        PHLWINDOWREF            pWindow;
+        PHLWINDOWREF             pWindow;
         SP<Render::IFramebuffer> fb;
-        bool                    highlight = false;
-        CHyprSignalListener     windowCommit;
-        Vector2D                lastWindowPosition, lastWindowSize;
+        bool                     highlight = false;
+        CHyprSignalListener      windowCommit;
+        Vector2D                 lastWindowPosition, lastWindowSize;
     };
 
     void redrawWindowImage(SP<SWindowImage>);
@@ -80,19 +80,19 @@ class CScrollOverview : public IOverview {
 
     bool                             closing = false;
 
-    CHyprSignalListener             mouseMoveHook;
-    CHyprSignalListener             mouseButtonHook;
-    CHyprSignalListener             touchMoveHook;
-    CHyprSignalListener             touchDownHook;
-    CHyprSignalListener             mouseAxisHook;
-    CHyprSignalListener             windowOpenHook;
-    CHyprSignalListener             windowFocusHook;
+    CHyprSignalListener              mouseMoveHook;
+    CHyprSignalListener              mouseButtonHook;
+    CHyprSignalListener              touchMoveHook;
+    CHyprSignalListener              touchDownHook;
+    CHyprSignalListener              mouseAxisHook;
+    CHyprSignalListener              windowOpenHook;
+    CHyprSignalListener              windowFocusHook;
 
     bool                             swipe             = false;
     bool                             swipeWasCommenced = false;
 
-    CHyprColor ACTIVE_COLOR = CHyprColor{0.2, 0.8, 1.0, 0.9};
-    CHyprColor INACTIVE_COLOR = CHyprColor{0.35, 0.35, 0.35, 0.67};
+    CHyprColor                       ACTIVE_COLOR   = CHyprColor{0.2, 0.8, 1.0, 0.9};
+    CHyprColor                       INACTIVE_COLOR = CHyprColor{0.35, 0.35, 0.35, 0.67};
 
     friend class CScrollOverviewPassElement;
 };
