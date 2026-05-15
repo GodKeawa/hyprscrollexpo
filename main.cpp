@@ -48,8 +48,6 @@ const std::string KEYWORD_EXPO_GESTURE = "hyprexpo-gesture";
 // [核心 Hook]: 渲染接管 (Render Workspace)
 // 当 Overview 激活时，我们将拦截 Hyprland 对底层 Workspace 的常规渲染。
 // 这里的机制是跳过原生的 Workspace 渲染，并调用 g_pOverview->render() 触发我们自己的逻辑。
-// [未来 Niri 改造注意]: 如果要保留 Bar (Layer Surface)，可能需要修改此处的接管逻辑，
-// 或者在后续阶段(如 RENDER_LAST_MOMENT)重新补画 UI Layer。
 // -----------------------------------------------------------------------------------------
 static void hkRenderWorkspace(void* thisptr, PHLMONITOR pMonitor, PHLWORKSPACE pWorkspace, const Time::steady_tp& now, const CBox& geometry) {
     if (!g_pOverview || renderingOverview || g_pOverview->blockOverviewRendering || g_pOverview->pMonitor != pMonitor)
@@ -320,8 +318,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 
     // -----------------------------------------------------------------------------------------
     // [渲染阶段监听]: 注入自定义渲染通道 (Render Pass)
-    // 改为 RENDER_PRE_WINDOW，
-    // 这样后续的 UI Layer 就能原生盖在 Overview 的上面。
     // -----------------------------------------------------------------------------------------
     static auto P_STAGE = Event::bus()->m_events.render.stage.listen([](eRenderStage stage) {
         if (stage == RENDER_LAST_MOMENT && g_pOverview) {

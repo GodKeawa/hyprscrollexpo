@@ -258,8 +258,6 @@ COverview::COverview(PHLWORKSPACE startedOn_, bool swipe_) :
     // -----------------------------------------------------------------------------------------
     // [输入事件]: 鼠标与触摸按键监听
     // 目前处理的都是基于 `lastMousePosLocal` 换算宫格矩阵点击哪个 Workspace 贴图。
-    // [未来 Niri 改造注意]: 受限于上述的“拍扁贴图”架构，这里无法像 Scroll 模式那样
-    // 判断鼠标是否精准点击了某个特定窗口。
     // -----------------------------------------------------------------------------------------
     mouseMoveHook = Event::bus()->m_events.input.mouse.move.listen([onCursorMove](Vector2D, Event::SCallbackInfo& info) { onCursorMove(info); });
     touchMoveHook = Event::bus()->m_events.input.touch.motion.listen([onCursorMove](ITouch::SMotionEvent, Event::SCallbackInfo& info) { onCursorMove(info); });
@@ -284,9 +282,6 @@ void COverview::redrawID(int id, bool forcelowres) {
     // 注意：与 ScrollOverview 渲染单个窗口不同，Grid 模式直接调用
     // g_pHyprRenderer->renderWorkspace 将整个工作区“拍扁”成一张贴图！
     // 这种机制极大地节省了性能（不用遍历所有窗口），但代价是丢失了窗口级的信息。
-    // [Niri 改造痛点]: 无法单独摘出某个窗口进行拖拽或高亮，因为图层已经被合并了。
-    // 如果想要在 Grid 模式实现窗口拖拽，必须像 Scroll 模式那样重构，
-    // 改为按 Z 轴遍历窗口并单独分配 Framebuffer。
     // -----------------------------------------------------
     if (!pMonitor)
         return;
@@ -485,8 +480,6 @@ void COverview::fullRender() {
     // -----------------------------------------------------
     // [模块]: Grid 模式主渲染管道
     // 遍历预先捕获的整个 Workspace Framebuffer，并按宫格矩阵计算坐标贴上去。
-    // [未来 Niri 改造注意]: 若要像方案 B 那样保留 Bar，可在此方法的最末尾
-    // (for循环外) 补充渲染 pMonitor->m_layerSurfaceLayers[1-3]。
     // -----------------------------------------------------
     const auto GAPSIZE = (closing ? (1.0 - size->getPercent()) : size->getPercent()) * GAP_WIDTH;
 

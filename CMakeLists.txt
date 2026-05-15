@@ -7,9 +7,17 @@ project(hyprexpo
 
 set(CMAKE_CXX_STANDARD 23)
 
-file(GLOB SRC "*.cpp")
+set(SRC
+    main.cpp
+    ExpoGesture.cpp
+    OverviewPassElement.cpp
+    overview.cpp
+    scrollOverview.cpp
+)
 
 add_library(hyprexpo SHARED ${SRC})
+
+target_compile_options(hyprexpo PRIVATE -std=c++2b -Wno-narrowing)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET

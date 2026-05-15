@@ -172,7 +172,7 @@ CScrollOverview::CScrollOverview(PHLWORKSPACE startedOn_, bool swipe_) : started
                         // Priority 1: Specific target window hovered -> Swap/Insert
                         if (closeOnWorkspace && closeOnWorkspace != draggedWindowOriginalWorkspace)
                             g_pCompositor->moveWindowToWorkspaceSafe(pWindow, closeOnWorkspace);
-                        
+
                         g_layoutManager->switchTargets(pWindow->layoutTarget(), hoveredWindow.lock()->layoutTarget());
                     } else if (closeOnWorkspace) {
                         // Priority 2: Dropped on workspace but no window -> Move to workspace
@@ -282,13 +282,13 @@ void CScrollOverview::selectHoveredWorkspace() {
         }
     }
 
-    const auto VIEWPORT_CENTER = CBox{{}, pMonitor->m_size}.middle();
-    const float slotHeight = pMonitor->m_size.y * scale->value();
-    const float topOffset = (VIEWPORT_CENTER.y * (1.0f - scale->value())) - (viewOffset->value().y * scale->value());
+    const auto  VIEWPORT_CENTER = CBox{{}, pMonitor->m_size}.middle();
+    const float slotHeight      = pMonitor->m_size.y * scale->value();
+    const float topOffset       = (VIEWPORT_CENTER.y * (1.0f - scale->value())) - (viewOffset->value().y * scale->value());
 
     // Determine workspace based on vertical slots (no gaps)
     int hoveredIdx = std::floor((lastMousePosLocal.y - topOffset) / slotHeight) + (int)activeIdx;
-    
+
     if (hoveredIdx >= 0 && hoveredIdx < (int)images.size()) {
         closeOnWorkspace = images[hoveredIdx]->pWorkspace;
     }
@@ -517,17 +517,20 @@ void CScrollOverview::redrawAll(bool forcelowres) {
 
     g_pHyprRenderer->renderBackground(pMonitor.lock());
 
-    // 只针对 background 图层 (壁纸层 layer 0) 进行渲染，避免错误渲染其他无用底层导致状态异常或崩溃
+    // -----------------------------------------------------------------------------------------
+    // Layer Surface 渲染说明：
+    // Layer 0: 背景层(background)：壁纸（如 hyprpaper、mpvpaper）、纯色背景。
+    // Layer 1: 底层(Bottom)：桌面小部件等，一般不希望遮挡窗口。
+    // Layer 1.5: 中层(Middle)：窗口集中存放层，浮动窗口/普通窗口/全屏窗口等都在这一层渲染。
+    // Layer 2: 顶层(Top)：状态栏，Dock等，一般希望覆盖窗口。
+    // Layer 3: 覆盖层：通知弹窗，应用启动器，锁屏界面（如 Hyprland 自带锁屏）等，最高覆盖等级。
+    // -----------------------------------------------------------------------------------------
+
+    // 仅渲染背景
     for (auto& ls : pMonitor->m_layerSurfaceLayers[0]) {
         if (validMapped(ls))
             g_pHyprRenderer->renderLayer(ls.lock(), pMonitor.lock(), Time::steadyNow());
     }
-
-    // -----------------------------------------------------------------------------------------
-    // [未来 Niri 改造方案 B]: 主动重绘 Bar (Layer Surfaces)
-    // 如果决定在 RENDER_LAST_MOMENT 保留状态栏，可在此处遍历 pMonitor->m_layerSurfaceLayers 的 [1], [2], [3]
-    // 强制调用 renderLayer 将 Waybar 盖在 Overview 界面之上。
-    // -----------------------------------------------------------------------------------------
 
     g_pHyprRenderer->m_renderData.blockScreenShader = true;
     g_pHyprRenderer->endRender();
@@ -673,8 +676,8 @@ void CScrollOverview::fullRender() {
 
     struct SRenderTask {
         SP<SWindowImage> img;
-        CBox borderBox;
-        CBox texbox;
+        CBox             borderBox;
+        CBox             texbox;
     };
     std::optional<SRenderTask> draggedTask;
 
